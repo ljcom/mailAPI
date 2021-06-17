@@ -174,3 +174,5 @@ C:\vsonline\API\mail\obj\Debug\mailAPI.vbproj.CopyComplete
 C:\vsonline\API\mail\obj\Debug\mailAPI.dll
 C:\vsonline\API\mail\obj\Debug\WebForms_Basic.xml
 C:\vsonline\API\mail\obj\Debug\mailAPI.pdb
+C:\vsonline\API\mail\bin\Microsoft.Identity.Client.dll
+C:\vsonline\API\mail\bin\Microsoft.Identity.Client.xml

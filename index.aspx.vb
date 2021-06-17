@@ -3,14 +3,18 @@ Imports MailKit
 Imports MimeKit
 Imports MailKit.Security
 Imports System.Web.Configuration
+Imports Microsoft.Identity.Client
 
 Public Class mail
     Inherits System.Web.UI.Page
 
     Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
         Dim mode As String = "", userid As String = "", pwd As String = "", server As String = "", port As Integer, ssl As Boolean
+        Dim clientId As String, dirId As String
         mode = Request.QueryString("mode")
 
+        clientId = System.Configuration.ConfigurationManager.AppSettings("clientId").ToString()
+        dirId = System.Configuration.ConfigurationManager.AppSettings("directoryId").ToString()
         Dim settings = System.Configuration.ConfigurationManager.AppSettings("mailSettings").ToString()
         Dim setting As String() = settings.Split(";")
         For i = 0 To setting.Length - 1
@@ -23,10 +27,11 @@ Public Class mail
             End If
         Next
         Dim msg As String = ""
-        If mode <> "" Then
+        If Not (mode Is Nothing) And mode <> "" Then
             If userid <> "" And pwd <> "" And server <> "" Then
                 If mode = "imap" Then
-                    msg = RetrieveIMAP(userid, pwd, server, port, ssl)
+
+                    msg = RetrieveIMAPAsync(userid, pwd, server, port, ssl, clientId, dirId).GetAwaiter().GetResult()
                     If msg = "" Then
                         Response.Write("{success:1}")
                     Else
@@ -43,8 +48,19 @@ Public Class mail
 
         End If
     End Sub
-    Public Function RetrieveIMAP(ByVal userid As String, ByVal pwd As String, ByVal server As String, ByVal port As Integer, ByVal ssl As Boolean) As String
+    Public Async Function RetrieveIMAPAsync(ByVal userid As String, ByVal pwd As String, ByVal server As String, ByVal port As Integer, ByVal ssl As Boolean, clientId As String, dirId As String) As Threading.Tasks.Task(Of String)
         Dim r As String = ""
+
+        Dim options = New PublicClientApplicationOptions With {
+            .ClientId = clientId,
+            .TenantId = dirId,
+            .RedirectUri = "https://login.microsoftonline.com/common/oauth2/nativeclient"
+        }
+        Dim publicClientApplication = PublicClientApplicationBuilder.CreateWithApplicationOptions(options).Build()
+        Dim scopes = New String() {"email", "offline_access", "https://outlook.office.com/IMAP.AccessAsUser.All"}
+        Dim authToken = Await publicClientApplication.AcquireTokenInteractive(scopes).ExecuteAsync()
+        Dim oauth2 = New SaslMechanismOAuth2(authToken.Account.Username, authToken.AccessToken)
+
         Using client = New MailKit.Net.Imap.ImapClient()
 
             Try
